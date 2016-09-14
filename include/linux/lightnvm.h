@@ -429,7 +429,7 @@ extern void nvm_unregister(char *);
 extern int nvm_submit_io(struct nvm_dev *, struct nvm_rq *);
 extern int nvm_erase_blk(struct nvm_dev *, struct nvm_block *);
 #else /* CONFIG_NVM */
-struct nvm_dev_ops;
+struct nvm_dev_ops {};
 
 static inline int nvm_register(struct request_queue *q, char *disk_name,
 							struct nvm_dev_ops *ops)
