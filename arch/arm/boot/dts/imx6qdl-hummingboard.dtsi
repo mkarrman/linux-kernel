@@ -126,6 +126,7 @@
 	status = "okay";
 };
 
+/* LVDS, MIPI, PCIe, RTC, mSATA, Audio codec */
 &i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hummingboard_i2c1>;
@@ -149,11 +150,32 @@
 	};
 };
 
+/* HDMi connector */
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hummingboard_i2c2>;
 	status = "okay";
+};
+
+/* Expansion connector */
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hummingboard_i2c3>;
+	status = "okay";
+
+	tcpmtest@0a {
+		compatible = "usb,tcpmtest";
+		reg = <0x0a>;
+		status = "okay";
+	};
+
+	tusb422@20 {
+		compatible = "usb,tcpci";
+		reg = <0x20>;
+		status = "okay";
+	};
 };
 
 &iomuxc {
@@ -188,6 +210,13 @@
 			fsl,pins = <
 				MX6QDL_PAD_KEY_COL3__I2C2_SCL 0x4001b8b1
 				MX6QDL_PAD_KEY_ROW3__I2C2_SDA 0x4001b8b1
+			>;
+		};
+
+		pinctrl_hummingboard_i2c3: hummingboard-i2c3 {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D17__I2C3_SCL 0x4001b8b1
+				MX6QDL_PAD_EIM_D18__I2C3_SDA 0x4001b8b1
 			>;
 		};
 
