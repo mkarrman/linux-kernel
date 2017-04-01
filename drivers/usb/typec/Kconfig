@@ -33,6 +33,11 @@ config TYPEC_TCPCI
 	help
 	  Type-C Port Controller driver for TCPCI-compliant controller.
 
+config TYPEC_TCPMTEST
+	tristate "Type-C Port Controller Manager test device"
+	help
+	  Type-C Port Controller Manager device used for testing the TCPM.
+
 endif
 
 endmenu
