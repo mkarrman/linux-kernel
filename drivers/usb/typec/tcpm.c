@@ -3195,6 +3195,43 @@ static int tcpm_try_role(const struct typec_capability *cap, int role)
 	return ret;
 }
 
+static int tcpm_activate_mode(const struct typec_capability *cap,
+			      int mode, int activate)
+{
+	struct tcpm_port *port = typec_cap_to_tcpm(cap);
+	int ret;
+
+	mutex_lock(&port->lock);
+
+	if (port->state != SRC_READY && port->state != SNK_READY) {
+		ret = -EAGAIN;
+		goto port_unlock;
+	}
+
+#if 0
+	if (mode == port->mode) {
+		ret = 0;
+		goto port_unlock;
+	}
+
+	port->swap_status = 0;
+	port->swap_pending = true;
+	reinit_completion(&port->swap_complete);
+	tcpm_set_state(port, VCONN_SWAP_SEND, 0);
+	mutex_unlock(&port->lock);
+
+	wait_for_completion(&port->swap_complete);
+
+	ret = port->swap_status;
+	goto swap_unlock;
+#endif
+	ret = -EOPNOTSUPP;
+
+port_unlock:
+	mutex_unlock(&port->lock);
+	return ret;
+}
+
 static void tcpm_init(struct tcpm_port *port)
 {
 	enum typec_cc_status cc1, cc2;
@@ -3355,6 +3392,7 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	port->typec_caps.pr_set = tcpm_pr_set;
 	port->typec_caps.vconn_set = tcpm_vconn_set;
 	port->typec_caps.try_role = tcpm_try_role;
+	port->typec_caps.activate_mode = tcpm_activate_mode;
 
 	port->partner_desc.identity = &port->partner_ident;
 
