@@ -1195,7 +1195,8 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 		if (port->pwr_role != TYPEC_SINK)
 			break;
 
-		memcpy(&port->source_caps, msg->payload, cnt * sizeof(u32));
+		for (i = 0; i < cnt; i++)
+			port->source_caps[i] = le32_to_cpu(msg->payload[i]);
 		port->nr_source_caps = cnt;
 
 		for (i = 0; i < cnt; i++) {
@@ -1264,7 +1265,7 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 			tcpm_queue_message(port, PD_MSG_CTRL_REJECT);
 			break;
 		}
-		port->sink_request = msg->payload[0];
+		port->sink_request = le32_to_cpu(msg->payload[0]);
 		tcpm_set_state(port, SRC_NEGOTIATE_CAPABILITIES, 0);
 		break;
 	case PD_DATA_SINK_CAP:
@@ -1278,7 +1279,7 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 		break;
 	case PD_DATA_BIST:
 		if (port->state == SRC_READY || port->state == SNK_READY) {
-			port->bist_request = msg->payload[0];
+			port->bist_request = le32_to_cpu(msg->payload[0]);
 			tcpm_set_state(port, BIST_RX, 0);
 		}
 		break;
