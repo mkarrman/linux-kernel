@@ -907,7 +907,7 @@ static void svdm_consume_modes(struct tcpm_port *port, const __le32 *payload,
 		pmode->vdo = le32_to_cpu(payload[i]);
 		pmode->index = i - 1;
 		paltmode->n_modes++;
-		tcpm_log(port, "  VDO %d: 0x%04x",
+		tcpm_log(port, "  VDO %d: 0x%08x",
 			 pmode->index, pmode->vdo);
 	}
 	port->partner_altmode[pmdata->altmodes] =
