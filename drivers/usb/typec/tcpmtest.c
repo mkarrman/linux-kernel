@@ -48,6 +48,7 @@ enum simstate {
 	SSTATE_SRC_RX_SOURCE_CAP,
 	SSTATE_SRC_WAIT_FOR_REQUEST,
 	SSTATE_SRC_SEND_REQUEST,
+	SSTATE_SRC_SEND_PS_RDY,
 	SSTATE_SRC_RUN,
 	SSTATE_TO_NONE,
 };
@@ -76,6 +77,7 @@ struct tcpmtest_data {
 	struct workqueue_struct *wq;
 	struct work_struct event_work;
 	struct delayed_work tmo_work;
+	unsigned long delay;
 
 	union {
 		unsigned int word;
@@ -655,9 +657,16 @@ static int tcpmtest_set_pd_rx(struct tcpc_dev *tcpc, bool enable)
 {
 	struct tcpmtest_data *data = tcpc_to_tcpmtest_data(tcpc);
 
-	data->pd_rx_enable = enable;
 	dev_info(data->dev, "%s(%s)\n", __FUNCTION__,
 		 enable ? "enable" : "disable");
+
+	mutex_lock(&data->lock);
+	if (data->pd_rx_enable != enable) {
+		data->pd_rx_enable = enable;
+		queue_work(data->wq, &data->event_work);
+	}
+	mutex_unlock(&data->lock);
+	
 	return 0;
 }
 
@@ -927,10 +936,6 @@ static void tcpmtest_process_tx_msg_for_snk(struct tcpmtest_data *data)
 			break;
 		}
 	}
-
-	if (data->request.msg_rx)
-		mod_delayed_work(data->wq, &data->tmo_work,
-				 msecs_to_jiffies(SNK_RESP_DELAY));
 }
 
 static void tcpmtest_mk_src_data_source_cap(struct tcpmtest_data *data)
@@ -956,6 +961,17 @@ static void tcpmtest_mk_src_accept(struct tcpmtest_data *data)
 	rx_msg = &(data->rx_msg);
 	// TODO: check if request is OK
 	rx_msg->header = PD_HEADER_LE(PD_CTRL_ACCEPT,
+				      TYPEC_SOURCE, TYPEC_HOST,
+				      data->rx_id++, 0);
+	data->request.msg_rx = 1;
+}
+
+static void tcpmtest_mk_src_ps_rdy(struct tcpmtest_data *data)
+{
+	struct pd_message *rx_msg;
+
+	rx_msg = &(data->rx_msg);
+	rx_msg->header = PD_HEADER_LE(PD_CTRL_PS_RDY,
 				      TYPEC_SOURCE, TYPEC_HOST,
 				      data->rx_id++, 0);
 	data->request.msg_rx = 1;
@@ -1038,15 +1054,12 @@ static void tcpmtest_process_tx_msg_for_src(struct tcpmtest_data *data)
 			break;
 		}
 	}
-
-	if (data->request.msg_rx)
-		mod_delayed_work(data->wq, &data->tmo_work,
-				 msecs_to_jiffies(SRC_RESP_DELAY));
 }
 
-static void tcpmtest_state_machine(struct tcpmtest_data *data)
+static void tcpmtest_state_machine(struct tcpmtest_data *data, bool timeout)
 {
 	enum simstate state = data->state;
+	long delay = -1;
 
 	switch (state) {
 
@@ -1068,18 +1081,23 @@ static void tcpmtest_state_machine(struct tcpmtest_data *data)
 		data->cc1_status = TYPEC_CC_OPEN;
 		data->cc2_status = TYPEC_CC_RP_3_0;
 		tcpm_cc_change(data->port);
+		delay = 5;
 		state = SSTATE_SRC_VBUS;
 		break;
 
 	case SSTATE_SRC_VBUS:
-		data->vbus_present = true;
-		data->request.vbus_chng = true;
-		state = SSTATE_SRC_RX_SOURCE_CAP;
+		if (timeout) {
+			data->vbus_present = true;
+			data->request.vbus_chng = true;
+			state = SSTATE_SRC_RX_SOURCE_CAP;
+		}
 		break;
 
 	case SSTATE_SRC_RX_SOURCE_CAP:
-		tcpmtest_mk_src_data_source_cap(data);
-		state = SSTATE_SRC_WAIT_FOR_REQUEST;
+		if (data->pd_rx_enable) {
+			tcpmtest_mk_src_data_source_cap(data);
+			state = SSTATE_SRC_WAIT_FOR_REQUEST;
+		}
 		break;
 
 	case SSTATE_SRC_WAIT_FOR_REQUEST:
@@ -1087,7 +1105,14 @@ static void tcpmtest_state_machine(struct tcpmtest_data *data)
 
 	case SSTATE_SRC_SEND_REQUEST:
 		tcpmtest_mk_src_accept(data);
-		state = SSTATE_SRC_RUN;
+		state = SSTATE_SRC_SEND_PS_RDY;
+		break;
+
+	case SSTATE_SRC_SEND_PS_RDY:
+		if (!data->request.msg_rx) {
+			tcpmtest_mk_src_ps_rdy(data);
+			state = SSTATE_SRC_RUN;
+		}
 		break;
 
 	case SSTATE_SRC_RUN:
@@ -1112,6 +1137,11 @@ static void tcpmtest_state_machine(struct tcpmtest_data *data)
 	}
 
 	data->state = state;
+	if (delay >= 0) {
+		data->delay = delay;
+		mod_delayed_work(data->wq, &data->tmo_work,
+				 msecs_to_jiffies(delay));
+	}
 }
 
 static void tcpmtest_event_work(struct work_struct *work)
@@ -1166,7 +1196,13 @@ static void tcpmtest_event_work(struct work_struct *work)
 		tcpm_pd_transmit_complete(data->port, tx_status);
 	}
 
-	tcpmtest_state_machine(data);
+	if (tcpmtest_state_machine(data, false))
+		queue_work(data->wq, &data->event_work);
+
+	if (data->request.msg_rx)
+		mod_delayed_work(data->wq, &data->tmo_work,
+				 msecs_to_jiffies(SRC_RESP_DELAY));
+
 	mutex_unlock(&data->lock);
 }
 
@@ -1181,6 +1217,9 @@ static void tcpmtest_tmo_work(struct work_struct *work)
 		tcpmtest_log_msg(data, TCPC_TX_SOP, &(data->rx_msg));
 		tcpm_pd_receive(data->port, &(data->rx_msg));
 	}
+
+	data->delay = 0;
+	tcpmtest_state_machine(data, true);
 }
 
 
