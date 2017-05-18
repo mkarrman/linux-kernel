@@ -42,6 +42,11 @@
 	 ((type) << 15) |				\
 	 ((custom) & 0x7FFF))
 
+#define VDO_STR(svid, ver, objp, cmdt, cmd)		\
+	(((svid) << 16) | VDO_SVDM_TYPE |		\
+	 VDO_SVDM_VERS(ver) | VDO_OPOS(objp) |		\
+	 VDO_CMDT(cmdt) | (cmd))
+
 #define VDO_SVDM_TYPE		(1 << 15)
 #define VDO_SVDM_VERS(x)	((x) << 13)
 #define VDO_OPOS(x)		((x) << 8)
@@ -83,6 +88,7 @@
 
 #define PD_VDO_VID(vdo)		((vdo) >> 16)
 #define PD_VDO_SVDM(vdo)	(((vdo) >> 15) & 1)
+#define PD_VDO_VER(vdo)		(((vdo) >> 13) & 0x3)
 #define PD_VDO_OPOS(vdo)	(((vdo) >> 8) & 0x7)
 #define PD_VDO_CMD(vdo)		((vdo) & 0x1f)
 #define PD_VDO_CMDT(vdo)	(((vdo) >> 6) & 0x3)
@@ -128,6 +134,8 @@
 	((usbh) << 31 | (usbd) << 30 | ((ptype) & 0x7) << 27	\
 	 | (is_modal) << 26 | ((vid) & 0xffff))
 
+#define PD_IDH_USB_HOST(vdo)	((vdo) & (1<<31))
+#define PD_IDH_USB_DEV(vdo)	((vdo) & (1<<30))
 #define PD_IDH_PTYPE(vdo)	(((vdo) >> 27) & 0x7)
 #define PD_IDH_VID(vdo)		((vdo) & 0xffff)
 #define PD_IDH_MODAL_SUPP(vdo)	((vdo) & (1 << 26))
@@ -147,6 +155,7 @@
  */
 #define VDO_PRODUCT(pid, bcd)	(((pid) & 0xffff) << 16 | ((bcd) & 0xffff))
 #define PD_PRODUCT_PID(vdo)	(((vdo) >> 16) & 0xffff)
+#define PD_PRODUCT_BCDD(vdo)	((vdo) & 0xffff)
 
 /*
  * Cable VDO
@@ -207,8 +216,16 @@
 	 | ((vcpwr) & 0x7) << 5 | (vcr) << 4 | (vbr) << 3		\
 	 | ((usbss) & 0x7))
 
+#define PD_VDO_AMA_HW_VER(vdo)		(((vdo) >> 28) & 0xf)
+#define PD_VDO_AMA_FW_VER(vdo)		(((vdo) >> 24) & 0xf)
+#define PD_VDO_AMA_SSTX2_DIR(vdo)	(((vdo) >> 11) & 1)
+#define PD_VDO_AMA_SSTX1_DIR(vdo)	(((vdo) >> 10) & 1)
+#define PD_VDO_AMA_SSRX1_DIR(vdo)	(((vdo) >> 9) & 1)
+#define PD_VDO_AMA_SSRX2_DIR(vdo)	(((vdo) >> 8) & 1)
+#define PD_VDO_AMA_VCONN_PWR(vdo)	(((vdo) >> 5) & 0x7)
 #define PD_VDO_AMA_VCONN_REQ(vdo)	(((vdo) >> 4) & 1)
 #define PD_VDO_AMA_VBUS_REQ(vdo)	(((vdo) >> 3) & 1)
+#define PD_VDO_AMA_SS_SUPP(vdo)		((vdo) & 0x7)
 
 #define AMA_VCONN_PWR_1W	0
 #define AMA_VCONN_PWR_1W5	1
