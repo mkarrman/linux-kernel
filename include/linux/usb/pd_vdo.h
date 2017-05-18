@@ -47,6 +47,11 @@
 #define VDO_OPOS_MASK		VDO_OPOS(0x7)
 #define VDO_CMDT_MASK		VDO_CMDT(0x3)
 
+#define VDO_STR(svid, ver, objp, cmdt, cmd)		\
+	(((svid) << 16) | VDO_SVDM_TYPE |		\
+	 VDO_SVDM_VERS(ver) | VDO_OPOS(objp) |		\
+	 VDO_CMDT(cmdt) | (cmd))
+
 #define CMDT_INIT		0
 #define CMDT_RSP_ACK		1
 #define CMDT_RSP_NAK		2
@@ -83,6 +88,7 @@
 
 #define PD_VDO_VID(vdo)		((vdo) >> 16)
 #define PD_VDO_SVDM(vdo)	(((vdo) >> 15) & 1)
+#define PD_VDO_VER(vdo)		(((vdo) >> 13) & 0x3)
 #define PD_VDO_OPOS(vdo)	(((vdo) >> 8) & 0x7)
 #define PD_VDO_CMD(vdo)		((vdo) & 0x1f)
 #define PD_VDO_CMDT(vdo)	(((vdo) >> 6) & 0x3)
@@ -128,6 +134,8 @@
 	((usbh) << 31 | (usbd) << 30 | ((ptype) & 0x7) << 27	\
 	 | (is_modal) << 26 | ((vid) & 0xffff))
 
+#define PD_IDH_USB_HOST(vdo)	((vdo) & (1<<31))
+#define PD_IDH_USB_DEV(vdo)	((vdo) & (1<<30))
 #define PD_IDH_PTYPE(vdo)	(((vdo) >> 27) & 0x7)
 #define PD_IDH_VID(vdo)		((vdo) & 0xffff)
 #define PD_IDH_MODAL_SUPP(vdo)	((vdo) & (1 << 26))
@@ -137,6 +145,7 @@
  * -------------
  * <31:20> : SBZ
  * <19:0>  : USB-IF assigned TID for this cable
+ * <31:0>  : XID !?
  */
 #define VDO_CSTAT(tid)		((tid) & 0xfffff)
 #define PD_CSTAT_TID(vdo)	((vdo) & 0xfffff)
@@ -149,6 +158,7 @@
  */
 #define VDO_PRODUCT(pid, bcd)	(((pid) & 0xffff) << 16 | ((bcd) & 0xffff))
 #define PD_PRODUCT_PID(vdo)	(((vdo) >> 16) & 0xffff)
+#define PD_PRODUCT_BCDD(vdo)	((vdo) & 0xffff)
 
 /*
  * Cable VDO
@@ -206,11 +216,19 @@
 #define VDO_AMA(hw, fw, tx1d, tx2d, rx1d, rx2d, vcpwr, vcr, vbr, usbss) \
 	(((hw) & 0x7) << 28 | ((fw) & 0x7) << 24			\
 	 | (tx1d) << 11 | (tx2d) << 10 | (rx1d) << 9 | (rx2d) << 8	\
-	 | ((vcpwr) & 0x3) << 5 | (vcr) << 4 | (vbr) << 3		\
+	 | ((vcpwr) & 0x7) << 5 | (vcr) << 4 | (vbr) << 3		\
 	 | ((usbss) & 0x7))
 
+#define PD_VDO_AMA_HW_VER(vdo)		(((vdo) >> 28) & 0xf)
+#define PD_VDO_AMA_FW_VER(vdo)		(((vdo) >> 24) & 0xf)
+#define PD_VDO_AMA_SSTX2_DIR(vdo)	(((vdo) >> 11) & 1)
+#define PD_VDO_AMA_SSTX1_DIR(vdo)	(((vdo) >> 10) & 1)
+#define PD_VDO_AMA_SSRX1_DIR(vdo)	(((vdo) >> 9) & 1)
+#define PD_VDO_AMA_SSRX2_DIR(vdo)	(((vdo) >> 8) & 1)
+#define PD_VDO_AMA_VCONN_PWR(vdo)	(((vdo) >> 5) & 0x7)
 #define PD_VDO_AMA_VCONN_REQ(vdo)	(((vdo) >> 4) & 1)
 #define PD_VDO_AMA_VBUS_REQ(vdo)	(((vdo) >> 3) & 1)
+#define PD_VDO_AMA_SS_SUPP(vdo)		((vdo) & 0x7)
 
 #define AMA_VCONN_PWR_1W	0
 #define AMA_VCONN_PWR_1W5	1
@@ -270,6 +288,13 @@
 	 | ((sdir) & 0x3))
 #define PD_DP_PIN_CAPS(x) ((((x) >> 6) & 0x1) ? (((x) >> 16) & 0x3f)	\
 			   : (((x) >> 8) & 0x3f))
+
+#define PD_DP_UFP_D_PIN(x)	(((x) >> 16) & 0xff)
+#define PD_DP_DFP_D_PIN(x)	(((x) >> 8) & 0xff)
+#define PD_DP_USB20_NOT_USED(x)	(((x) >> 7) & 1)
+#define PD_DP_RECEPTACLE(x)	(((x) >> 6) & 1)
+#define PD_DP_SIGNAL(x)		(((x) >> 2) & 0xf)
+#define PD_DP_PORT_CAP(x)	((x) & 0x3)
 
 #define MODE_DP_PIN_A		0x01
 #define MODE_DP_PIN_B		0x02
@@ -379,10 +404,6 @@
 
 #define USB_DP_TYPEC_URL	"http://help.vesa.org/dp-usb-type-c/"
 
-/* USB Vendor IDs */
-#define USB_VID_APPLE		0x05ac
-#define USB_VID_GOOGLE		0x18d1
-
 /* VDM command timeouts (in ms) */
 
 #define PD_T_VDM_UNSTRUCTURED	500
@@ -396,7 +417,7 @@
 
 #define SVID_DISCOVERY_MAX	16
 
-struct pd_mode_data {
+struct pd_mode_data {    /* Why is this exposed outside tcpm? and why in this file? */
 	int svid_index;		/* current SVID index		*/
 	int nsvids;
 	u16 svids[SVID_DISCOVERY_MAX];

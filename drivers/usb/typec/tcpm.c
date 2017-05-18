@@ -20,6 +20,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/printk.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
@@ -357,6 +358,7 @@ static bool tcpm_log_full(struct tcpm_port *port)
 static void _tcpm_log(struct tcpm_port *port, const char *fmt, va_list args)
 {
 	char tmpbuffer[LOG_BUFFER_ENTRY_SIZE];
+#if 0
 	u64 ts_nsec = local_clock();
 	unsigned long rem_nsec;
 
@@ -366,9 +368,11 @@ static void _tcpm_log(struct tcpm_port *port, const char *fmt, va_list args)
 		if (!port->logbuffer[port->logbuffer_head])
 			return;
 	}
+#endif
 
 	vsnprintf(tmpbuffer, sizeof(tmpbuffer), fmt, args);
 
+#if 0
 	mutex_lock(&port->logbuffer_lock);
 
 	if (tcpm_log_full(port)) {
@@ -395,6 +399,9 @@ static void _tcpm_log(struct tcpm_port *port, const char *fmt, va_list args)
 		  (unsigned long)ts_nsec, rem_nsec / 1000,
 		  tmpbuffer);
 	port->logbuffer_head = (port->logbuffer_head + 1) % LOG_BUFFER_ENTRIES;
+#else
+	dev_info(port->dev, ": %s\n", tmpbuffer);
+#endif
 
 abort:
 	mutex_unlock(&port->logbuffer_lock);
@@ -907,7 +914,7 @@ static void svdm_consume_modes(struct tcpm_port *port, const __le32 *payload,
 		pmode->vdo = le32_to_cpu(payload[i]);
 		pmode->index = i - 1;
 		paltmode->n_modes++;
-		tcpm_log(port, "  VDO %d: 0x%04x",
+		tcpm_log(port, "  VDO %d: 0x%08x",
 			 pmode->index, pmode->vdo);
 	}
 	port->partner_altmode[pmdata->altmodes] =
@@ -1199,7 +1206,8 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 		if (port->pwr_role != TYPEC_SINK)
 			break;
 
-		memcpy(&port->source_caps, msg->payload, cnt * sizeof(u32));
+		for (i = 0; i < cnt; i++)
+			port->source_caps[i] = le32_to_cpu(msg->payload[i]);
 		port->nr_source_caps = cnt;
 
 		for (i = 0; i < cnt; i++) {
@@ -1268,7 +1276,7 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 			tcpm_queue_message(port, PD_MSG_CTRL_REJECT);
 			break;
 		}
-		port->sink_request = msg->payload[0];
+		port->sink_request = le32_to_cpu(msg->payload[0]);
 		tcpm_set_state(port, SRC_NEGOTIATE_CAPABILITIES, 0);
 		break;
 	case PD_DATA_SINK_CAP:
@@ -1282,7 +1290,7 @@ static void tcpm_pd_data_request(struct tcpm_port *port,
 		break;
 	case PD_DATA_BIST:
 		if (port->state == SRC_READY || port->state == SNK_READY) {
-			port->bist_request = msg->payload[0];
+			port->bist_request = le32_to_cpu(msg->payload[0]);
 			tcpm_set_state(port, BIST_RX, 0);
 		}
 		break;
@@ -3218,6 +3226,43 @@ static int tcpm_try_role(const struct typec_capability *cap, int role)
 	return ret;
 }
 
+static int tcpm_activate_mode(const struct typec_capability *cap,
+			      int mode, int activate)
+{
+	struct tcpm_port *port = typec_cap_to_tcpm(cap);
+	int ret;
+
+	mutex_lock(&port->lock);
+
+	if (port->state != SRC_READY && port->state != SNK_READY) {
+		ret = -EAGAIN;
+		goto port_unlock;
+	}
+
+#if 0
+	if (mode == port->mode) {
+		ret = 0;
+		goto port_unlock;
+	}
+
+	port->swap_status = 0;
+	port->swap_pending = true;
+	reinit_completion(&port->swap_complete);
+	tcpm_set_state(port, VCONN_SWAP_SEND, 0);
+	mutex_unlock(&port->lock);
+
+	wait_for_completion(&port->swap_complete);
+
+	ret = port->swap_status;
+	goto swap_unlock;
+#endif
+	ret = -EOPNOTSUPP;
+
+port_unlock:
+	mutex_unlock(&port->lock);
+	return ret;
+}
+
 static void tcpm_init(struct tcpm_port *port)
 {
 	enum typec_cc_status cc1, cc2;
@@ -3378,6 +3423,7 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	port->typec_caps.pr_set = tcpm_pr_set;
 	port->typec_caps.vconn_set = tcpm_vconn_set;
 	port->typec_caps.try_role = tcpm_try_role;
+	port->typec_caps.activate_mode = tcpm_activate_mode;
 
 	port->partner_desc.identity = &port->partner_ident;
 
@@ -3394,7 +3440,8 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	}
 
 	if (tcpc->config->alt_modes) {
-		struct typec_altmode_desc *paltmode = tcpc->config->alt_modes;
+		const struct typec_altmode_desc *paltmode =
+			tcpc->config->alt_modes;
 
 		i = 0;
 		while (paltmode->svid && i < ARRAY_SIZE(port->port_altmode)) {

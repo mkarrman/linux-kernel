@@ -167,6 +167,8 @@ static inline unsigned int pdo_fixed_voltage(u32 pdo)
 	return ((pdo >> PDO_FIXED_VOLT_SHIFT) & PDO_VOLT_MASK) * 50;
 }
 
+/* pdo_fixed_current() ... */
+
 static inline unsigned int pdo_min_voltage(u32 pdo)
 {
 	return ((pdo >> PDO_VAR_MIN_VOLT_SHIFT) & PDO_VOLT_MASK) * 50;

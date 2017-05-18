@@ -85,6 +85,17 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
+
+		reg_typec1_vbus: typec1-vbus {
+			compatible = "regulator-fixed";
+			enable-active-high;
+			gpio = <&gpio3 9 GPIO_ACTIVE_HIGH>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hummingboard_typec1_vbus>;
+			regulator-name = "typec1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
 	};
 
 	sound-sgtl5000 {
@@ -171,9 +182,15 @@
 		status = "okay";
 	};
 
-	tusb422@20 {
-		compatible = "usb,tcpci";
-		reg = <0x20>;
+	fusb302@22 {
+		compatible = "fcs,fusb302";
+		reg = <0x22>;
+		//interrupt-parent = <&gpio1>;
+		//interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
+		fcs,int_n-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hummingboard_typec1_int>;
+		vbus-supply = <&reg_typec1_vbus>;
 		status = "okay";
 	};
 };
@@ -220,6 +237,12 @@
 			>;
 		};
 
+		pinctrl_hummingboard_typec1_int: hummingboard_typec1_int {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_1__GPIO1_IO01 0x8001b000
+			>;
+		};
+
 		pinctrl_hummingboard_pcie_reset: hummingboard-pcie-reset {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_DA4__GPIO3_IO04 0x1b0b1
@@ -258,6 +281,10 @@
 
 		pinctrl_hummingboard_usbotg_vbus: hummingboard-usbotg-vbus {
 			fsl,pins = <MX6QDL_PAD_EIM_D22__GPIO3_IO22 0x1b0b0>;
+		};
+
+		pinctrl_hummingboard_typec1_vbus: hummingboard_typec1_vbus {
+			fsl,pins = <MX6QDL_PAD_EIM_DA9__GPIO3_IO09 0x000b0>;
 		};
 
 		pinctrl_hummingboard_usdhc2_aux: hummingboard-usdhc2-aux {
@@ -318,7 +345,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hummingboard_usbotg_id>;
 	vbus-supply = <&reg_usbotg_vbus>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc2 {
