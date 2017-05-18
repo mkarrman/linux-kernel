@@ -10,6 +10,11 @@ config TYPEC_TCPM
 
 if TYPEC_TCPM
 
+config TYPEC_TCPMTEST
+	tristate "Type-C Port Controller Manager test device"
+	help
+	  Type-C Port Controller Manager device used for testing the TCPM.
+
 config TYPEC_TCPCI
 	tristate "Type-C Port Controller Interface driver"
 	depends on I2C
