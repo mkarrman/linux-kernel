@@ -274,6 +274,7 @@ void typec_set_pwr_role(struct typec_port *port, enum typec_role role);
 void typec_set_vconn_role(struct typec_port *port, enum typec_role role);
 void typec_set_pwr_opmode(struct typec_port *port, enum typec_pwr_opmode mode);
 
+int typec_find_mux_mode(const char *name);
 int typec_set_orientation(struct typec_port *port,
 			  enum typec_orientation orientation);
 int typec_set_mode(struct typec_port *port, int mode);

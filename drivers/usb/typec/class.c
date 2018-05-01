@@ -1255,6 +1255,28 @@ EXPORT_SYMBOL_GPL(typec_set_pwr_opmode);
 /* ------------------------------------------ */
 /* API for Multiplexer/DeMultiplexer Switches */
 
+static const char * const typec_mux_modes[] = {
+	[TYPEC_MUX_NONE] = "none",
+	[TYPEC_MUX_2CH_USBSS] = "2ch-usbss",
+	[TYPEC_MUX_4CH_AM] = "4ch-am",
+	[TYPEC_MUX_2CH_USBSS_2CH_AM] = "2ch-usbss-2ch-am",
+	[TYPEC_MUX_4CH_USBSS] = "4ch-usbss",
+	[TYPEC_MUX_2CH_USBSS_2CH_AM_B] = "2ch-usbss-2ch-am-b",
+};
+
+/**
+ * typec_find_mux_mode - Get the typec mux mode from its string representation
+ * @name: mux mode string
+ *
+ * Returns typec_mux_mode if success, otherwise negative error code.
+ */
+int typec_find_mux_mode(const char *name)
+{
+	return match_string(typec_mux_modes, ARRAY_SIZE(typec_mux_modes),
+			    name);
+}
+EXPORT_SYMBOL_GPL(typec_find_mux_mode);
+
 /**
  * typec_set_orientation - Set USB Type-C cable plug orientation
  * @port: USB Type-C Port
