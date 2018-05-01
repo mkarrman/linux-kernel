@@ -9,6 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/property.h>
 #include <linux/usb/typec.h>
 #include <linux/usb/typec_mux.h>
 
@@ -25,6 +26,7 @@ struct pi3usb30532 {
 	struct mutex lock; /* protects the cached conf register */
 	struct typec_switch sw;
 	struct typec_mux mux;
+	u8 mode_support; /* Modes supported by hardware as bit flags */
 	u8 conf;
 };
 
@@ -88,16 +90,19 @@ static int pi3usb30532_mux_set(struct typec_mux *mux, enum typec_mux_mode mode)
 		new_conf = PI3USB30532_CONF_OPEN;
 		break;
 	case TYPEC_MUX_2CH_USBSS:
-		new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
-			   PI3USB30532_CONF_USB3;
+		if (pi->mode_support & (0x1 << TYPEC_MUX_2CH_USBSS))
+			new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
+				   PI3USB30532_CONF_USB3;
 		break;
 	case TYPEC_MUX_4CH_AM:
-		new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
-			   PI3USB30532_CONF_4LANE_DP;
+		if (pi->mode_support & (0x1 << TYPEC_MUX_4CH_AM))
+			new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
+				   PI3USB30532_CONF_4LANE_DP;
 		break;
 	case TYPEC_MUX_2CH_USBSS_2CH_AM:
-		new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
-			   PI3USB30532_CONF_USB3_AND_2LANE_DP;
+		if (pi->mode_support & (0x1 << TYPEC_MUX_2CH_USBSS_2CH_AM))
+			new_conf = (new_conf & PI3USB30532_CONF_SWAP) |
+				   PI3USB30532_CONF_USB3_AND_2LANE_DP;
 		break;
 	}
 
@@ -123,6 +128,18 @@ static int pi3usb30532_probe(struct i2c_client *client)
 	pi->mux.dev = dev;
 	pi->mux.set = pi3usb30532_mux_set;
 	mutex_init(&pi->lock);
+
+	if (device_property_present(dev, "have-2ch-usbss"))
+		pi->mode_support |= 0x1 << TYPEC_MUX_2CH_USBSS;
+	if (device_property_present(dev, "have-4ch-am"))
+		pi->mode_support |= 0x1 << TYPEC_MUX_4CH_AM;
+	if (device_property_present(dev, "have-2ch-usbss-2ch-am"))
+		pi->mode_support |= 0x1 << TYPEC_MUX_2CH_USBSS_2CH_AM;
+
+	if (!pi->mode_support) {
+		dev_warn(dev, "No mode support found, assuming full support\n");
+		pi->mode_support = (u8)-1;
+	}
 
 	ret = i2c_smbus_read_byte_data(client, PI3USB30532_CONF);
 	if (ret < 0) {
