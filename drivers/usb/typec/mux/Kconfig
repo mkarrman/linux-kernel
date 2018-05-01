@@ -7,4 +7,11 @@ config TYPEC_MUX_PI3USB30532
 	  Say Y or M if your system has a Pericom PI3USB30532 Type-C cross
 	  switch / mux chip found on some devices with a Type-C port.
 
+config TYPEC_MUX_TIHD3SS460
+	tristate "TI HD3SS460 USB Type-C Alternate Mode MUX driver"
+	depends on GPIOLIB
+	help
+	  Say Y or M if your system has a Texas Instruments HD3SS460 Type-C
+	  Alternate Mode MUX chip found on some devices with a Type-C port.
+
 endmenu
