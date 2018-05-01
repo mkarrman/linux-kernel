@@ -74,6 +74,7 @@ enum typec_orientation {
 
 enum typec_mux_mode {
 	TYPEC_MUX_NONE,				/* Open switch */
+	TYPEC_MUX_DEFAULT,			/* Initial mode after connect */
 	TYPEC_MUX_2CH_USBSS,			/* 2ch USB SS */
 	TYPEC_MUX_4CH_AM,			/* 4ch Alt Mode */
 	TYPEC_MUX_2CH_USBSS_2CH_AM,		/* 2ch USB SS + 2ch Alt Mode */

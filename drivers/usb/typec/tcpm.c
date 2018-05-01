@@ -790,7 +790,7 @@ static int tcpm_set_roles(struct tcpm_port *port, bool attached,
 	else
 		usb_role = USB_ROLE_DEVICE;
 
-	ret = tcpm_mux_set(port, TYPEC_MUX_2CH_USBSS, usb_role, orientation);
+	ret = tcpm_mux_set(port, TYPEC_MUX_DEFAULT, usb_role, orientation);
 	if (ret < 0)
 		return ret;
 

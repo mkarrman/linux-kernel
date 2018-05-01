@@ -26,6 +26,7 @@ struct pi3usb30532 {
 	struct mutex lock; /* protects the cached conf register */
 	struct typec_switch sw;
 	struct typec_mux mux;
+	enum typec_mux_mode default_mux_mode; /* Mode for TYPEC_MUX_DEFAULT */
 	u8 mode_support; /* Modes supported by hardware as bit flags */
 	u8 conf;
 };
@@ -84,6 +85,9 @@ static int pi3usb30532_mux_set(struct typec_mux *mux, enum typec_mux_mode mode)
 	mutex_lock(&pi->lock);
 	new_conf = pi->conf;
 
+	if (mode == TYPEC_MUX_DEFAULT)
+		mode = pi->default_mux_mode;
+
 	switch (mode) {
 	default:
 	case TYPEC_MUX_NONE:
@@ -116,6 +120,7 @@ static int pi3usb30532_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct pi3usb30532 *pi;
+	const char *mode_str;
 	int ret;
 
 	pi = devm_kzalloc(dev, sizeof(*pi), GFP_KERNEL);
@@ -128,6 +133,19 @@ static int pi3usb30532_probe(struct i2c_client *client)
 	pi->mux.dev = dev;
 	pi->mux.set = pi3usb30532_mux_set;
 	mutex_init(&pi->lock);
+
+	if (!device_property_present(dev, "default-mux-mode")) {
+		pi->default_mux_mode = TYPEC_MUX_2CH_USBSS;
+	} else {
+		ret = device_property_read_string(dev, "default-mux-mode",
+						  &mode_str);
+		if (ret)
+			return ret;
+		ret = typec_find_mux_mode(mode_str);
+		if (ret < 0)
+			return ret;
+		pi->default_mux_mode = ret;
+	}
 
 	if (device_property_present(dev, "have-2ch-usbss"))
 		pi->mode_support |= 0x1 << TYPEC_MUX_2CH_USBSS;
