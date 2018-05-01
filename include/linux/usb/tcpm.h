@@ -93,19 +93,18 @@ struct tcpc_config {
 	const struct typec_altmode_desc *alt_modes;
 };
 
-/* Mux state attributes */
-#define TCPC_MUX_USB_ENABLED		BIT(0)	/* USB enabled */
-#define TCPC_MUX_DP_ENABLED		BIT(1)	/* DP enabled */
-#define TCPC_MUX_POLARITY_INVERTED	BIT(2)	/* Polarity inverted */
-
-/* Mux modes, decoded to attributes */
+/* Mux modes */
 enum tcpc_mux_mode {
-	TYPEC_MUX_NONE	= 0,				/* Open switch */
-	TYPEC_MUX_USB	= TCPC_MUX_USB_ENABLED,		/* USB only */
-	TYPEC_MUX_DP	= TCPC_MUX_DP_ENABLED,		/* DP only */
-	TYPEC_MUX_DOCK	= TCPC_MUX_USB_ENABLED |	/* Both USB and DP */
-			  TCPC_MUX_DP_ENABLED,
+	TYPEC_MUX_NONE,				/* Open switch */
+	TYPEC_MUX_2CH_USBSS,			/* 2ch USB SS */
+	TYPEC_MUX_4CH_AM,			/* 4ch Alt Mode */
+	TYPEC_MUX_2CH_USBSS_2CH_AM,		/* 2ch USB SS + 2ch Alt Mode */
+
+	// Example of additional modes that may be needed in future:
+	TYPEC_MUX_4CH_USBSS,			/* 4ch USB SS */
+	TYPEC_MUX_2CH_USBSS_2CH_AM_B,		/* 2ch USB SS + 2ch Alt Mode (e.g. DP GPU2) */
 };
+
 
 /**
  * struct tcpc_dev - Port configuration and callback functions
