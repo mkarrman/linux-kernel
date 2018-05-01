@@ -93,18 +93,6 @@ struct tcpc_config {
 	const struct typec_altmode_desc *alt_modes;
 };
 
-/* Mux modes */
-enum tcpc_mux_mode {
-	TYPEC_MUX_NONE,				/* Open switch */
-	TYPEC_MUX_2CH_USBSS,			/* 2ch USB SS */
-	TYPEC_MUX_4CH_AM,			/* 4ch Alt Mode */
-	TYPEC_MUX_2CH_USBSS_2CH_AM,		/* 2ch USB SS + 2ch Alt Mode */
-
-	// Example of additional modes that may be needed in future:
-	TYPEC_MUX_4CH_USBSS,			/* 4ch USB SS */
-	TYPEC_MUX_2CH_USBSS_2CH_AM_B,		/* 2ch USB SS + 2ch Alt Mode (e.g. DP GPU2) */
-};
-
 
 /**
  * struct tcpc_dev - Port configuration and callback functions

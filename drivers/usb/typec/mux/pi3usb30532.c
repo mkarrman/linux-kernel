@@ -9,7 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
-#include <linux/usb/tcpm.h>
+#include <linux/usb/typec.h>
 #include <linux/usb/typec_mux.h>
 
 #define PI3USB30532_CONF			0x00
@@ -73,7 +73,7 @@ static int pi3usb30532_sw_set(struct typec_switch *sw,
 	return ret;
 }
 
-static int pi3usb30532_mux_set(struct typec_mux *mux, int state)
+static int pi3usb30532_mux_set(struct typec_mux *mux, enum typec_mux_mode mode)
 {
 	struct pi3usb30532 *pi = container_of(mux, struct pi3usb30532, mux);
 	u8 new_conf;
@@ -82,7 +82,7 @@ static int pi3usb30532_mux_set(struct typec_mux *mux, int state)
 	mutex_lock(&pi->lock);
 	new_conf = pi->conf;
 
-	switch (state) {
+	switch (mode) {
 	default:
 	case TYPEC_MUX_NONE:
 		new_conf = PI3USB30532_CONF_OPEN;

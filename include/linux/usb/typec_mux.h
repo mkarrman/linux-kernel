@@ -29,7 +29,7 @@ struct typec_switch {
  * struct typec_switch - USB Type-C connector pin mux
  * @dev: Mux device
  * @entry: List entry
- * @set: Callback to the driver for setting the state of the mux
+ * @set: Callback to the driver for setting the mode of the mux
  *
  * Pin Multiplexer/DeMultiplexer switch routing the USB Type-C connector pins to
  * different components depending on the requested mode of operation. Used with
@@ -39,7 +39,7 @@ struct typec_mux {
 	struct device *dev;
 	struct list_head entry;
 
-	int (*set)(struct typec_mux *mux, int state);
+	int (*set)(struct typec_mux *mux, enum typec_mux_mode mode);
 };
 
 struct typec_switch *typec_switch_get(struct device *dev);

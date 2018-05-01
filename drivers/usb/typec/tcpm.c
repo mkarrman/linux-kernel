@@ -644,7 +644,7 @@ void tcpm_pd_transmit_complete(struct tcpm_port *port,
 }
 EXPORT_SYMBOL_GPL(tcpm_pd_transmit_complete);
 
-static int tcpm_mux_set(struct tcpm_port *port, enum tcpc_mux_mode mode,
+static int tcpm_mux_set(struct tcpm_port *port, enum typec_mux_mode mode,
 			enum usb_role usb_role,
 			enum typec_orientation orientation)
 {
