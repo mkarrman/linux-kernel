@@ -1,0 +1,18 @@
+USB Type-C Multiplexer/DeMultiplexer Switch
+
+Optional properties:
+ - have-2ch-usbss : The hardware has support for 2ch USB SS.
+ - have-4ch-am : The hardware has support for 4ch Alternate Mode.
+ - have-2ch-usbss-2ch-am : The hardware has support for 2ch USB SS + 2ch
+     Alternate Mode.
+ - have-4ch-usbss : The hardware has support for 4ch USB SS.
+ - have-2ch-usbss-2ch-am-b : The hardware has support for 2ch USB SS + 2ch
+     Alternate Mode, alternate pair.
+
+Example :
+pi3usb30532@00 {
+	compatible = "pericom,pi3usb30532";
+	reg = <0x00>;
+	have-2ch-usbss;
+	have-4ch-am;
+};
