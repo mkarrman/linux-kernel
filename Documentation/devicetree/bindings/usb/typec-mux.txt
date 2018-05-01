@@ -8,6 +8,7 @@ Optional properties:
  - have-4ch-usbss : The hardware has support for 4ch USB SS.
  - have-2ch-usbss-2ch-am-b : The hardware has support for 2ch USB SS + 2ch
      Alternate Mode, alternate pair.
+ - default-mux-mode: Mux mode to use after initial connection.
 
 Example :
 pi3usb30532@00 {
@@ -15,4 +16,5 @@ pi3usb30532@00 {
 	reg = <0x00>;
 	have-2ch-usbss;
 	have-4ch-am;
+	default-mux-mode = <2ch-usbss>;
 };
